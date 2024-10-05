@@ -1,18 +1,67 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light dark">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
-    >
-    <title>Hello world!</title>
+    />
+    <link rel="stylesheet" href="./public/css/main.css" />
+    <title>anfelos | home</title>
   </head>
   <body>
     <main class="container">
-      <h1>Hello world!</h1>
+      <section class="hero mb-l">
+        <div class="text-centered mb-l">
+          <h2>Andres Osorio</h2>
+          <figure>
+            <img
+              src="./public/img/me.jpg"
+              alt="Anfelo's profile pic"
+              width="200px"
+            />
+          </figure>
+        </div>
+        <p>
+          Hi, I'm an electronics engineer that got in love with software
+          development. I still love to tinker around with hardware, but I don't
+          do it as often as I would love to. I love silent mornings with coffee
+          and the sound of my keyboard.
+        </p>
+        <p>
+          I love to nerd 🤓 about coffee, read books and travel around the world
+          🌎.
+        </p>
+        <p>I'm from Bogota, Colombia but currently living in Hamburg.</p>
+      </section>
+
+      <section class="hero">
+        <h2>Blog</h2>
+        <a href="./blog/programming-beyond-frontend-web.html">
+          <hgroup>
+            <h5>Programing Beyond Frontend Web</h5>
+            <p>October 10, 2024</p>
+          </hgroup>
+        </a>
+      </section>
     </main>
+
+    <footer class="text-centered">
+      <small>Made with 🫶</small>
+      <div class="social-icons-container">
+        <a
+          href="https://www.linkedin.com/in/andres-felipe-osorio-8568b6a1"
+          target="_blank"
+          class="social-icon"
+        >
+          <img src="./public/img/linkedin.svg" alt="Linkedin logo" />
+        </a>
+        <a href="https://github.com/anfelo" target="_blank" class="social-icon">
+          <img src="./public/img/github.svg" alt="Github logo" />
+        </a>
+      </div>
+    </footer>
   </body>
 </html>
