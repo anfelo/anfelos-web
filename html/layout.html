@@ -1,0 +1,32 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{{block "title" .}}{{end}}</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css" />
+        <link rel="stylesheet" href="/static/css/main.css" />
+    </head>
+    <body>
+        {{block "content" .}}{{end}}
+
+
+        <footer class="text-centered">
+            <small>Made with 🫶</small>
+            <div class="social-icons-container">
+                <a
+                  href="https://www.linkedin.com/in/andres-felipe-osorio-8568b6a1"
+                  target="_blank"
+                >
+                    <img src="/static/img/linkedin.svg" alt="Linkedin logo" />
+                </a>
+                <a href="https://github.com/anfelo" target="_blank">
+                    <img src="/static/img/github.svg" alt="Github logo" />
+                </a>
+            </div>
+        </footer>
+    </body>
+</html>
+{{end}}
