@@ -1,14 +1,19 @@
 package main
 
 import (
+	"embed"
 	"errors"
 	"html/template"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
+
+//go:embed html/*.html
+var files embed.FS
 
 type TemplateRegistry struct {
 	templates map[string]*template.Template
@@ -25,7 +30,9 @@ func (t *TemplateRegistry) Render(w io.Writer, name string, data interface{}, c 
 
 func main() {
 	templates := make(map[string]*template.Template)
-	templates["home"] = template.Must(template.ParseFiles("html/home.html", "html/layout.html"))
+	templates["home"] = template.Must(
+		template.New("html/layout.html").ParseFS(files, "html/layout.html", "html/home.html"),
+	)
 
 	e := echo.New()
 	e.Renderer = &TemplateRegistry{
@@ -42,7 +49,11 @@ func main() {
 
 	e.GET("/", Home)
 
-	e.Logger.Fatal(e.Start(":8080"))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	e.Logger.Fatal(e.Start(":" + port))
 }
 
 func Home(c echo.Context) error {
