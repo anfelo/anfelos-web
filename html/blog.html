@@ -1,0 +1,17 @@
+{{define "title"}}
+{{.Title}}
+{{end}}
+
+
+{{define "content"}}
+<main class="container blog-content">
+    <nav aria-label="breadcrumb">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li>{{.Title}}</li>
+      </ul>
+    </nav>
+
+    {{.Content}}
+</main>
+{{end}}

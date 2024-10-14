@@ -3,10 +3,12 @@ package main
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -33,6 +35,7 @@ func main() {
 	templates["home"] = template.Must(
 		template.New("html/layout.html").ParseFS(files, "html/layout.html", "html/home.html"),
 	)
+	templates["blog"] = template.Must(template.ParseFiles("html/blog.html", "html/layout.html"))
 
 	e := echo.New()
 	e.Renderer = &TemplateRegistry{
@@ -48,6 +51,7 @@ func main() {
 	e.Static("/static", "public")
 
 	e.GET("/", Home)
+	e.GET("/blog/:blog_slug", Blog)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -60,4 +64,37 @@ func Home(c echo.Context) error {
 	data := make(map[string]interface{})
 
 	return c.Render(http.StatusOK, "home", data)
+}
+
+func Blog(c echo.Context) error {
+	type blogData struct {
+		Title   string
+		Content template.HTML
+	}
+
+	blogSlug := c.Param("blog_slug")
+
+	blogTitle := blogSlugToTitle(blogSlug)
+	blogContent, err := os.ReadFile(fmt.Sprintf("./html/articles/%s.html", blogSlug))
+	if err != nil {
+		blogTitle = "Not Found"
+		notFoundContent, err := os.ReadFile("./html/not-found.html")
+		if err != nil {
+			// TODO: Redirect to the home page maybe
+		}
+		blogContent = notFoundContent
+	}
+
+	return c.Render(http.StatusOK, "blog", blogData{
+		Title:   blogTitle,
+		Content: template.HTML(blogContent),
+	})
+}
+
+func blogSlugToTitle(s string) string {
+	ss := strings.Split(s, "-")
+	for i, v := range ss {
+        ss[i] = strings.ToUpper(v[0:1]) + v[1:]
+	}
+	return strings.Join(ss, " ")
 }
