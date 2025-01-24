@@ -5,12 +5,28 @@
   margin: auto;
 }
 
+.m-0 {
+  margin: 0;
+}
+
+.mr-s {
+  margin-right: 0.2rem;
+}
+
 .mb-l {
   margin-bottom: 1rem;
 }
 
 .text-centered {
   text-align: center;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-center {
+  align-items: center;
 }
 
 .social-icons-container {
