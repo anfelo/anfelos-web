@@ -135,7 +135,7 @@ function main() {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
 
         // Compute the matrix
-        const aspect = state.canvasWidth / state.canvasHeight;
+        const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
         const zNear = 1;
         const zFar = 2000;
         let matrix = m4.perspective(state.fieldOfViewRadians, aspect, zNear, zFar);
