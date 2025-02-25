@@ -1,33 +1,54 @@
-import { m3 } from "./matrix.js";
+import { m4 } from "./matrix.js";
 import { resizeCanvasToDisplaySize } from "./canvas.js";
-import { createShader, createProgram } from "./webglutils.js";
+import { createShader, createProgram, initBuffers } from "./webglutils.js";
 
 const vertexShaderSource = `
-attribute vec2 a_position;
+attribute vec4 a_position;
 attribute vec2 a_texcoord;
 
-uniform mat3 u_matrix;
+uniform mat4 u_matrix;
 
-varying vec2 v_texcoord;
+varying highp vec2 v_texcoord;
 
 void main() {
-    gl_Position = vec4((u_matrix * vec3(a_position, 1)).xy, 0, 1);
+    gl_Position = u_matrix * a_position;
+
     v_texcoord = a_texcoord;
 }`;
 
 const fragmentShaderSource = `
-precision mediump float;
-
-varying vec2 v_texcoord;
+varying highp vec2 v_texcoord;
 
 uniform sampler2D u_texture;
 
 void main() {
-    gl_FragColor = texture2D(u_texture, v_texcoord);
+   gl_FragColor = texture2D(u_texture, v_texcoord);
 }`;
 
-export function main() {
-    window.addEventListener("resize", () => {
+function radToDeg(r) {
+    return (r * 180) / Math.PI;
+}
+
+function degToRad(d) {
+    return (d * Math.PI) / 180;
+}
+
+function main() {
+    window.addEventListener("resize", drawScene);
+    window.addEventListener("mousemove", event => {
+        // clientX: 0 -> rotDegY: -30
+        // clientX: clientWidth -> rotDegY: 30
+        const windowWidth = window.innerWidth;
+        state.rotDegY = ((event.clientX - windowWidth / 2) / (windowWidth / 2)) * 30;
+        state.rotRadY = degToRad(state.rotDegY);
+
+        // clientY: 0 -> rotDegX: -20
+        // clientY: clientHeight -> rotDegX: 40
+        // rotOffsetX: 10
+        const windowHeight = window.innerHeight;
+        state.rotDegX = ((event.clientY - windowHeight / 2) / (windowHeight / 2)) * 30 + 10;
+        state.rotRadX = degToRad(state.rotDegX);
+
         drawScene();
     });
 
@@ -39,14 +60,22 @@ export function main() {
     }
 
     const state = {
+        fieldOfViewRadians: degToRad(60),
+        fieldOfViewDeg: 60,
         canvasWidth: canvas.clientWidth,
         canvasHeight: canvas.clientHeight,
-        posX: canvas.clientWidth / 2 - 50,
-        posY: canvas.clientHeight / 2 - 20,
-        angleInRadians: 0,
-        angleInDegrees: 0,
-        scaleX: 1,
-        scaleY: 1
+        posX: 0,
+        posY: 0,
+        posZ: -6,
+        rotDegX: 0,
+        rotDegY: 30,
+        rotDegZ: 0,
+        rotRadX: degToRad(0),
+        rotRadY: degToRad(30),
+        rotRadZ: degToRad(0),
+        scaleX: 1.7,
+        scaleY: 1.7,
+        scaleZ: 1.7
     };
 
     const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
@@ -63,47 +92,12 @@ export function main() {
     const matrixLocation = gl.getUniformLocation(program, "u_matrix");
     const textureLocation = gl.getUniformLocation(program, "u_texture");
 
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    setGeometryAndTexcoords(gl);
+    const buffers = initBuffers(gl);
 
-    // create an EBO to instruct webgl how to paint the rectangle with the
-    // previous positions
-    const indicesBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
-    setGeometryIndices(gl);
-
-    // set position attribute
-    // each float takes 4 bytes and each vertex has 4 elements
-    // (2 * position and 2 * texcoords)
-    gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 4 * 4, 0);
-    gl.enableVertexAttribArray(positionAttributeLocation);
-    // set texture attribute
-    gl.vertexAttribPointer(texcoordAttributeLocation, 2, gl.FLOAT, false, 4 * 4, 4 * 2);
-    gl.enableVertexAttribArray(texcoordAttributeLocation);
-
-    // Create a texture.
-    const texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    // Fill the texture with a 1x1 blue pixel.
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-    // Asynchronously load an image
-    const image = new Image();
-    image.src = "/static/img/me.jpg";
-    image.addEventListener("load", function () {
-        // Now that the image has loaded make copy it to the texture.
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
-        gl.generateMipmap(gl.TEXTURE_2D);
-
-        drawScene();
-    });
+    // Load texture
+    const texture = loadTexture(gl, "/static/img/me.jpg", () => drawScene());
+    // Flip image pixels into the bottom-to-top order that WebGL expects.
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
     drawScene();
 
@@ -117,64 +111,92 @@ export function main() {
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
         // Clear the canvas.
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        // Disable the depth buffer
-        gl.disable(gl.DEPTH_TEST);
+        // Enable the depth buffer
+        gl.enable(gl.DEPTH_TEST);
 
-        // Turn off culling. By default backfacing triangles
+        // Turn on culling. By default backfacing triangles
         // will be culled.
-        gl.disable(gl.CULL_FACE);
-
-        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.enable(gl.CULL_FACE);
 
         // Tell it to use our program (pair of shaders)
         gl.useProgram(program);
 
-        // Apply matrix transformations
-        let matrix = m3.projection(state.canvasWidth, state.canvasHeight);
-        matrix = m3.translate(matrix, state.posX, state.posY);
-        matrix = m3.rotate(matrix, state.angleInRadians);
-        matrix = m3.scale(matrix, state.scaleX, state.scaleY);
-        matrix = m3.translate(matrix, -50, -75);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+        gl.vertexAttribPointer(texcoordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(texcoordAttributeLocation);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+        gl.enableVertexAttribArray(positionAttributeLocation);
+        gl.vertexAttribPointer(positionAttributeLocation, 3, gl.FLOAT, false, 0, 0);
+
+        // Tell WebGL which indices to use to index the vertices
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+
+        // Compute the matrix
+        const aspect = state.canvasWidth / state.canvasHeight;
+        const zNear = 1;
+        const zFar = 2000;
+        let matrix = m4.perspective(state.fieldOfViewRadians, aspect, zNear, zFar);
+
+        matrix = m4.translate(matrix, state.posX, state.posY, state.posZ);
+        matrix = m4.xRotate(matrix, state.rotRadX);
+        matrix = m4.yRotate(matrix, state.rotRadY);
+        matrix = m4.zRotate(matrix, state.rotRadZ);
+        matrix = m4.scale(matrix, state.scaleX, state.scaleY, state.scaleZ);
 
         // Set the matrix.
-        gl.uniformMatrix3fv(matrixLocation, false, matrix);
+        gl.uniformMatrix4fv(matrixLocation, false, matrix);
+
+        // Tell WebGL we want to affect texture unit 0
+        gl.activeTexture(gl.TEXTURE0);
+
+        // Bind the texture to texture unit 0
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        // Tell the shader we bound the texture to texture unit 0
         gl.uniform1i(textureLocation, 0);
 
         // draw elements
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
-        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+        const vertexCount = 6 * 6; // 6 Faces * 6 Vertices
+        const type = gl.UNSIGNED_SHORT;
+        const offset = 0;
+        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
 }
 
 /**
- * Fills the buffer with the values that define a rectangle and
- * its texture.
- * Note, will put the values in whatever buffer is currently
- * bound to the ARRAY_BUFFER bind point
+ * Loads the texture
  * @param {WebGLRenderingContext} gl
+ * @param {string} textureSrc
+ * @param {CallableFunction} onLoadCallback
+ * @returns {WebGLTexture | null}
  */
-function setGeometryAndTexcoords(gl) {
-    gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array([
-            // position   // texcoords
-            0, 0,       0, 0, // top left
-            200, 0,      1, 0, // top right
-            0, 200,      0, 1, // bottom left
-            200, 200,     1, 1 // bottom right
-        ]),
-        gl.STATIC_DRAW
-    );
-}
+function loadTexture(gl, textureSrc, onLoadCallback) {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    // Fill the texture with a 1x1 blue pixel.
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
 
-/**
- * Fills the indices buffer to tell WebGL how to draw the geometry
- * @param {WebGLRenderingContext} gl
- */
-function setGeometryIndices(gl) {
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2, 1, 2, 3]), gl.STATIC_DRAW);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+    // Asynchronously load an image
+    const image = new Image();
+    image.src = textureSrc;
+    image.addEventListener("load", function () {
+        // Now that the image has loaded make copy it to the texture.
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+        gl.generateMipmap(gl.TEXTURE_2D);
+
+        onLoadCallback();
+    });
+
+    return texture;
 }
 
 main();
