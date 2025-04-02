@@ -1,202 +1,143 @@
-import { m4 } from "./matrix.js";
-import { resizeCanvasToDisplaySize } from "./canvas.js";
-import { createShader, createProgram, initBuffers } from "./webglutils.js";
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
-const vertexShaderSource = `
-attribute vec4 a_position;
-attribute vec2 a_texcoord;
+const backgroundEl = document.querySelector("#background");
+const backgroundElRect = backgroundEl.getBoundingClientRect();
 
-uniform mat4 u_matrix;
+const state = {
+    posX: 0,
+    posY: 2.75,
+    posZ: 0,
+    rotDegX: 0,
+    rotDegY: 30,
+    rotDegZ: 0,
+    rotRadX: degToRad(0),
+    rotRadY: degToRad(30),
+    rotRadZ: degToRad(0),
+    scaleX: 0.8,
+    scaleY: 0.8,
+    scaleZ: 0.8
+};
 
-varying highp vec2 v_texcoord;
+const scene = new THREE.Scene();
 
-void main() {
-    gl_Position = u_matrix * a_position;
+const aspect = backgroundElRect.width / backgroundElRect.height;
+const d = 4;
+const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+camera.position.set(0, 2, 20);
+camera.lookAt(scene.position);
 
-    v_texcoord = a_texcoord;
-}`;
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(backgroundElRect.width, backgroundElRect.height);
+renderer.setAnimationLoop(animate);
+backgroundEl.appendChild(renderer.domElement);
 
-const fragmentShaderSource = `
-varying highp vec2 v_texcoord;
+window.addEventListener("resize", () => onWindowResize(), false);
+window.addEventListener("mousemove", event => {
+    // clientX: 0 -> rotDegY: -30
+    // clientX: clientWidth -> rotDegY: 30
+    const windowWidth = window.innerWidth;
+    state.rotDegY = ((event.clientX - windowWidth / 2) / (windowWidth / 2)) * 30;
+    state.rotRadY = degToRad(state.rotDegY);
 
-uniform sampler2D u_texture;
+    // clientY: 0 -> rotDegX: -20
+    // clientY: clientHeight -> rotDegX: 40
+    // rotOffsetX: 10
+    const windowHeight = window.innerHeight;
+    state.rotDegX = ((event.clientY - windowHeight / 2) / (windowHeight / 2)) * 30 - 10;
+    state.rotRadX = degToRad(state.rotDegX);
+});
 
-void main() {
-   gl_FragColor = texture2D(u_texture, v_texcoord);
-}`;
+const loader = new THREE.TextureLoader();
+const texture = loader.load("/static/img/me.jpg");
+texture.colorSpace = THREE.SRGBColorSpace;
 
-function radToDeg(r) {
-    return (r * 180) / Math.PI;
+const geometry = new THREE.BoxGeometry(state.scaleX, state.scaleY, state.scaleZ);
+const material = new THREE.MeshBasicMaterial({ map: texture });
+const cube = new THREE.Mesh(geometry, material);
+cube.translateY(state.posY);
+scene.add(cube);
+
+const modelPaths = [
+    "/static/models/tree_pineSmallD.glb",
+    "/static/models/tree_pineSmallC.glb",
+    "/static/models/tree_small_dark.glb"
+];
+
+const gltfLoader = new GLTFLoader();
+
+function loadModels(modelPaths) {
+    return Promise.all(
+        modelPaths.map(
+            path =>
+                new Promise((resolve, reject) => {
+                    gltfLoader.load(path, gltf => resolve(gltf.scene), undefined, reject);
+                })
+        )
+    );
+}
+
+loadModels(modelPaths)
+    .then(models => {
+        if (!models.length) {
+            return;
+        }
+        for (let i = 0; i < 10; i++) {
+            const posY = i * 0.6 - 1;
+            for (let j = 0; j < 4; j++) {
+                const clone = models[Math.floor(Math.random() * models.length)].clone();
+                clone.position.set(Math.random() + 3, -posY, Math.random() + i);
+
+                const scale = Math.random() * 0.5 + 0.5;
+                clone.scale.set(scale, scale, scale);
+
+                scene.add(clone);
+            }
+
+            for (let j = 0; j < 4; j++) {
+                const clone = models[Math.floor(Math.random() * models.length)].clone();
+                clone.position.set(-1 * (Math.random() + 3), -posY, Math.random() + i);
+
+                const scale = Math.random() * 0.5 + 0.5;
+                clone.scale.set(scale, scale, scale);
+
+                scene.add(clone);
+            }
+        }
+    })
+    .catch(error => console.error("Error loading models:", error));
+
+const directionalLight1 = new THREE.DirectionalLight(0xffffff, 3);
+directionalLight1.position.set(5, 10, 5);
+scene.add(directionalLight1);
+
+const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight2.position.set(-5, 10, 5);
+scene.add(directionalLight2);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+scene.add(ambientLight);
+
+scene.background = new THREE.Color(0x13171f);
+
+function animate() {
+    cube.rotation.x = state.rotRadX;
+    cube.rotation.y = state.rotRadY;
+
+    renderer.render(scene, camera);
+}
+
+function onWindowResize() {
+    const backgroundElRect = backgroundEl.getBoundingClientRect();
+
+    renderer.setSize(backgroundElRect.width, backgroundElRect.height);
+
+    scene.updateMatrixWorld()
+
+    camera.aspect = backgroundElRect.width / backgroundElRect.height;
+    camera.updateProjectionMatrix();
 }
 
 function degToRad(d) {
     return (d * Math.PI) / 180;
 }
-
-function main() {
-    window.addEventListener("resize", drawScene);
-    window.addEventListener("mousemove", event => {
-        // clientX: 0 -> rotDegY: -30
-        // clientX: clientWidth -> rotDegY: 30
-        const windowWidth = window.innerWidth;
-        state.rotDegY = ((event.clientX - windowWidth / 2) / (windowWidth / 2)) * 30;
-        state.rotRadY = degToRad(state.rotDegY);
-
-        // clientY: 0 -> rotDegX: -20
-        // clientY: clientHeight -> rotDegX: 40
-        // rotOffsetX: 10
-        const windowHeight = window.innerHeight;
-        state.rotDegX = ((event.clientY - windowHeight / 2) / (windowHeight / 2)) * 30 + 10;
-        state.rotRadX = degToRad(state.rotDegX);
-
-        drawScene();
-    });
-
-    /** @type {HTMLCanvasElement} */
-    const canvas = document.querySelector("#c");
-    const gl = canvas.getContext("webgl");
-    if (!gl) {
-        return;
-    }
-
-    const state = {
-        fieldOfViewRadians: degToRad(60),
-        fieldOfViewDeg: 60,
-        canvasWidth: canvas.clientWidth,
-        canvasHeight: canvas.clientHeight,
-        posX: 0,
-        posY: 0,
-        posZ: -6,
-        rotDegX: 0,
-        rotDegY: 30,
-        rotDegZ: 0,
-        rotRadX: degToRad(0),
-        rotRadY: degToRad(30),
-        rotRadZ: degToRad(0),
-        scaleX: 1.7,
-        scaleY: 1.7,
-        scaleZ: 1.7
-    };
-
-    const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-
-    // setup GLSL program
-    const program = createProgram(gl, vertexShader, fragmentShader);
-
-    // look up where the vertex data needs to go.
-    const positionAttributeLocation = gl.getAttribLocation(program, "a_position");
-    const texcoordAttributeLocation = gl.getAttribLocation(program, "a_texcoord");
-
-    // lookup uniforms
-    const matrixLocation = gl.getUniformLocation(program, "u_matrix");
-    const textureLocation = gl.getUniformLocation(program, "u_texture");
-
-    const buffers = initBuffers(gl);
-
-    // Load texture
-    const texture = loadTexture(gl, "/static/img/me.jpg", () => drawScene());
-    // Flip image pixels into the bottom-to-top order that WebGL expects.
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-
-    drawScene();
-
-    /**
-     * Draws the scene.
-     */
-    function drawScene() {
-        resizeCanvasToDisplaySize(gl.canvas);
-
-        // Tell WebGL how to convert from clip space to pixels
-        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-        // Clear the canvas.
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        // Enable the depth buffer
-        gl.enable(gl.DEPTH_TEST);
-
-        // Turn on culling. By default backfacing triangles
-        // will be culled.
-        gl.enable(gl.CULL_FACE);
-
-        // Tell it to use our program (pair of shaders)
-        gl.useProgram(program);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
-        gl.vertexAttribPointer(texcoordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(texcoordAttributeLocation);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
-        gl.enableVertexAttribArray(positionAttributeLocation);
-        gl.vertexAttribPointer(positionAttributeLocation, 3, gl.FLOAT, false, 0, 0);
-
-        // Tell WebGL which indices to use to index the vertices
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-
-        // Compute the matrix
-        const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-        const zNear = 1;
-        const zFar = 2000;
-        let matrix = m4.perspective(state.fieldOfViewRadians, aspect, zNear, zFar);
-
-        matrix = m4.translate(matrix, state.posX, state.posY, state.posZ);
-        matrix = m4.xRotate(matrix, state.rotRadX);
-        matrix = m4.yRotate(matrix, state.rotRadY);
-        matrix = m4.zRotate(matrix, state.rotRadZ);
-        matrix = m4.scale(matrix, state.scaleX, state.scaleY, state.scaleZ);
-
-        // Set the matrix.
-        gl.uniformMatrix4fv(matrixLocation, false, matrix);
-
-        // Tell WebGL we want to affect texture unit 0
-        gl.activeTexture(gl.TEXTURE0);
-
-        // Bind the texture to texture unit 0
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-
-        // Tell the shader we bound the texture to texture unit 0
-        gl.uniform1i(textureLocation, 0);
-
-        // draw elements
-        const vertexCount = 6 * 6; // 6 Faces * 6 Vertices
-        const type = gl.UNSIGNED_SHORT;
-        const offset = 0;
-        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-    }
-}
-
-/**
- * Loads the texture
- * @param {WebGLRenderingContext} gl
- * @param {string} textureSrc
- * @param {CallableFunction} onLoadCallback
- * @returns {WebGLTexture | null}
- */
-function loadTexture(gl, textureSrc, onLoadCallback) {
-    const texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    // Fill the texture with a 1x1 blue pixel.
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 255, 255]));
-
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-    // Asynchronously load an image
-    const image = new Image();
-    image.src = textureSrc;
-    image.addEventListener("load", function () {
-        // Now that the image has loaded make copy it to the texture.
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
-        gl.generateMipmap(gl.TEXTURE_2D);
-
-        onLoadCallback();
-    });
-
-    return texture;
-}
-
-main();
