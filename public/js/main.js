@@ -22,8 +22,16 @@ const state = {
 const scene = new THREE.Scene();
 
 const aspect = backgroundElRect.width / backgroundElRect.height;
-const d = 4;
-const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+const frustum = 8;
+const cameraZoom = frustum / 2;
+const camera = new THREE.OrthographicCamera(
+    -cameraZoom * aspect,
+    cameraZoom * aspect,
+    cameraZoom,
+    -cameraZoom,
+    1,
+    1000
+);
 camera.position.set(0, 2, 20);
 camera.lookAt(scene.position);
 
@@ -130,12 +138,15 @@ function animate() {
 function onWindowResize() {
     const backgroundElRect = backgroundEl.getBoundingClientRect();
 
-    renderer.setSize(backgroundElRect.width, backgroundElRect.height);
-
-    scene.updateMatrixWorld()
-
-    camera.aspect = backgroundElRect.width / backgroundElRect.height;
+    // This works for OrthographicCamera resizing.
+    const aspect = backgroundElRect.width / backgroundElRect.height;
+    camera.left = -aspect * cameraZoom;
+    camera.right = aspect * cameraZoom;
+    camera.top = cameraZoom;
+    camera.bottom = -cameraZoom;
     camera.updateProjectionMatrix();
+
+    renderer.setSize(backgroundElRect.width, backgroundElRect.height);
 }
 
 function degToRad(d) {
