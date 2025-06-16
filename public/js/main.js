@@ -85,35 +85,35 @@ function loadModels(modelPaths) {
     );
 }
 
-loadModels(modelPaths)
-    .then(models => {
-        if (!models.length) {
-            return;
-        }
-        for (let i = 0; i < 10; i++) {
-            const posY = i * 0.6 - 1;
-            for (let j = 0; j < 4; j++) {
-                const clone = models[Math.floor(Math.random() * models.length)].clone();
-                clone.position.set(Math.random() + 3, -posY, Math.random() + i);
-
-                const scale = Math.random() * 0.5 + 0.5;
-                clone.scale.set(scale, scale, scale);
-
-                scene.add(clone);
-            }
-
-            for (let j = 0; j < 4; j++) {
-                const clone = models[Math.floor(Math.random() * models.length)].clone();
-                clone.position.set(-1 * (Math.random() + 3), -posY, Math.random() + i);
-
-                const scale = Math.random() * 0.5 + 0.5;
-                clone.scale.set(scale, scale, scale);
-
-                scene.add(clone);
-            }
-        }
-    })
-    .catch(error => console.error("Error loading models:", error));
+// loadModels(modelPaths)
+//     .then(models => {
+//         if (!models.length) {
+//             return;
+//         }
+//         for (let i = 0; i < 10; i++) {
+//             const posY = i * 0.6 - 1;
+//             for (let j = 0; j < 4; j++) {
+//                 const clone = models[Math.floor(Math.random() * models.length)].clone();
+//                 clone.position.set(Math.random() + 3, -posY, Math.random() + i);
+//
+//                 const scale = Math.random() * 0.5 + 0.5;
+//                 clone.scale.set(scale, scale, scale);
+//
+//                 scene.add(clone);
+//             }
+//
+//             for (let j = 0; j < 4; j++) {
+//                 const clone = models[Math.floor(Math.random() * models.length)].clone();
+//                 clone.position.set(-1 * (Math.random() + 3), -posY, Math.random() + i);
+//
+//                 const scale = Math.random() * 0.5 + 0.5;
+//                 clone.scale.set(scale, scale, scale);
+//
+//                 scene.add(clone);
+//             }
+//         }
+//     })
+//     .catch(error => console.error("Error loading models:", error));
 
 const directionalLight1 = new THREE.DirectionalLight(0xffffff, 3);
 directionalLight1.position.set(5, 10, 5);
