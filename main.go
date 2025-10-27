@@ -35,6 +35,9 @@ func main() {
 	templates["home"] = template.Must(
 		template.New("html/layout.html").ParseFS(files, "html/layout.html", "html/home.html"),
 	)
+	templates["cv"] = template.Must(
+		template.New("html/layout.html").ParseFS(files, "html/layout.html", "html/cv.html"),
+	)
 	templates["blog"] = template.Must(template.ParseFiles("html/blog.html", "html/layout.html"))
 
 	e := echo.New()
@@ -51,6 +54,7 @@ func main() {
 	e.Static("/static", "public")
 
 	e.GET("/", Home)
+	e.GET("/cv/:year", CV)
 	e.GET("/blog/:blog_slug", Blog)
 
 	port := os.Getenv("PORT")
@@ -94,7 +98,13 @@ func Blog(c echo.Context) error {
 func blogSlugToTitle(s string) string {
 	ss := strings.Split(s, "-")
 	for i, v := range ss {
-        ss[i] = strings.ToUpper(v[0:1]) + v[1:]
+		ss[i] = strings.ToUpper(v[0:1]) + v[1:]
 	}
 	return strings.Join(ss, " ")
+}
+
+func CV(c echo.Context) error {
+	data := make(map[string]interface{})
+
+	return c.Render(http.StatusOK, "cv", data)
 }

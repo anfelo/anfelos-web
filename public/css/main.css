@@ -9,12 +9,20 @@ body {
     margin: auto;
 }
 
+.w-50 {
+    width: 50%;
+}
+
 .m-0 {
     margin: 0;
 }
 
 .mr-s {
     margin-right: 0.2rem;
+}
+
+.mb-m {
+    margin-bottom: 0.5rem;
 }
 
 .mb-l {
@@ -31,6 +39,38 @@ body {
 
 .flex-center {
     align-items: center;
+}
+
+.flex-justify-space-between {
+    justify-content: space-between;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.flex-gap-xs {
+    gap: 4px;
+}
+
+.flex-gap-s {
+    gap: 8px;
+}
+
+.flex-gap-m {
+    gap: 12px;
+}
+
+.flex-gap-l {
+    gap: 16px;
+}
+
+.flex-gap-xl {
+    gap: 20px;
+}
+
+.flex-gap-xxl {
+    gap: 24px;
 }
 
 .social-icons-container {
@@ -61,4 +101,69 @@ body {
     width: 100vw;
     height: 100%;
     z-index: -1;
+}
+
+.badge {
+    border-radius: var(--pico-border-radius);
+    padding: 4px;
+    font-size: 0.8rem;
+}
+
+.badge-green {
+    background-color: var(--pico-color-jade-250);
+    color: black;
+}
+
+.badge-orange {
+    background-color: var(--pico-color-pumpkin-250);
+    color: black;
+}
+
+.badge-slate {
+    background-color: var(--pico-color-slate-500);
+    color: white;
+}
+
+.badge-green {
+    background-color: var(--pico-color-jade-250);
+    color: black;
+}
+
+/* CV Print Page */
+
+@media print {
+    width: 210mm;
+    margin: 0 auto;
+}
+
+.print-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.print-wrapper {
+    /* max-width: calc(210mm - 15mm * 2); */
+    width: 100%;
+    box-sizing: border-box;
+    padding: 15mm;
+    margin: 0 auto;
+}
+
+.print-content {
+    margin: 0 20px;
+}
+
+.print-content .profile-pic {
+    border-radius: 50%;
+    overflow: hidden;
+    width: 200px;
+    height: 200px;
+    background-image: url(/static/img/profile-pic.jpg);
+    background-size: 180%;
+    background-position: center;
+}
+
+.print-content h2 {
+    border-bottom: 2px solid;
 }
