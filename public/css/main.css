@@ -49,6 +49,10 @@ body {
     flex: 1;
 }
 
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
 .flex-gap-xs {
     gap: 4px;
 }
